@@ -10,7 +10,7 @@ public class Parser {
 		} else if (args.length == 1) {
 			System.out.println("Analyse du fichier : " + args[0] + " ... ");
 			try {
-				parser = new Parser(new java.io.FileInputStream(args[0] + ".alg"));
+				parser = new Parser(new java.io.FileInputStream(args[0]));
 			} catch (java.io.FileNotFoundException e) {
 				System.out.println("Le fichier : " + args[0] + " n'est pas trouvé");
 				return;
