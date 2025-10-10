@@ -2,13 +2,30 @@ PARSER_BEGIN(Parser)
 
 /** Simple brace matcher. */
 public class Parser {
-
-  /** Main entry point. */
-  public static void main(String args[]) throws ParseException {
-    Parser parser = new Parser(System.in);
-    parser.Input();
-  }
-
+	public static void main (String args[]) {
+		Parser parser;
+		if (args.length == 0) {
+			System.out.println("Entrée standard");
+			parser = new Parser(System.in);
+		} else if (args.length == 1) {
+			System.out.println("Analyse du fichier : " + args[0] + " ... ");
+			try {
+				parser = new Parser(new java.io.FileInputStream(args[0] + ".alg"));
+			} catch (java.io.FileNotFoundException e) {
+				System.out.println("Le fichier : " + args[0] + " n'est pas trouvé");
+				return;
+			}
+		} else {
+			System.out.println("Erreur de lecture");
+			return;
+		}
+		try {
+			parser.Input();
+			System.out.println("Analyse syntaxique OK");
+		} catch (ParseException e) {
+			System.out.println("L'analyse syntaxique révèle des erreurs");
+		}
+	}
 }
 
 PARSER_END(Parser)
@@ -17,12 +34,12 @@ PARSER_END(Parser)
 void Input() :
 {}
 {
-  MatchedBraces() ("\n"|"\r")* <EOF>
+	MatchedBraces() ("\n" | "\r")* <EOF>
 }
 
 /** Brace matching production. */
 void MatchedBraces() :
 {}
 {
-  "{" [ MatchedBraces() ] "}"
+	"{" ( MatchedBraces() )* "}"
 }
