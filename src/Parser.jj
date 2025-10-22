@@ -34,17 +34,44 @@ PARSER_END(Parser)
 void Input() :
 {}
 {
-	MatchedBraces() ("\n" | "\r")* <EOF>
+	Function() ("\n" | "\r")* <EOF>
 }
 
-/** Brace matching production. */
-void MatchedBraces() :
+void Function() :
 {}
 {
-	"{" ( MatchedBraces() )* "}"
+	"func " Type() " " Name() " (" ParamaterList() ") {" (Instruction())* "}"
 }
 
+void Type() :
+{}
+{
+	"int" | "bool" | "float" | "str"
+}
 
+void Name() :
+{}
+{
+	"caca"
+}
+
+void Instruction() :
+{}
+{
+	"caca"
+}
+
+void ParamaterList() :
+{}
+{
+    Paramater() ( ", " Paramater() )*
+}
+
+void Paramater() :
+{}
+{
+	Type() " " Name()
+}
 
 /**
 * COMMENTAIRES
