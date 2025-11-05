@@ -34,14 +34,7 @@ PARSER_END(Parser)
 void Input() :
 {}
 {
-	MatchedBraces() ("\n" | "\r")* <EOF>
-}
-
-/** Brace matching production. */
-void MatchedBraces() :
-{}
-{
-	"{" ( MatchedBraces() )* "}"
+	(Expression())* ("\n" | "\r")
 }
 
 
@@ -70,4 +63,41 @@ void MatchedBraces() :
 
 <IN_SINGLE_LINE_COMMENT,IN_FORMAL_COMMENT,IN_MULTI_LINE_COMMENT> MORE : {
   <~[]>
+}
+
+/**
+* Opération arithmétique
+*/
+
+SKIP : { " " | "\t" }
+
+TOKEN : {
+  <PLUS: "+">
+| <MINUS: "-">
+| <MULTIPLY: "*">
+| <DIVIDE: "/">
+| <LPAREN: "(">
+| <RPAREN: ")">
+| <NUMBER: (["0"-"9"])+>
+}
+
+/** Arithmetic expression production. */
+void Expression() :
+{}
+{
+	Term() (((<PLUS> | <MINUS>) Term()))*
+}
+
+/** Term production (multiplication/division). */
+void Term() :
+{}
+{
+	Factor() (((<MULTIPLY> | <DIVIDE>) Factor()))*
+}
+
+/** Factor production (numbers and parenthesized expressions). */
+void Factor() :
+{}
+{
+	<NUMBER> | "(" Expression() ")"
 }
