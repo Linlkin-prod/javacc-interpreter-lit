@@ -34,7 +34,7 @@ PARSER_END(Parser)
 void Input() :
 {}
 {
-	Expression() ("\n" | "\r")* <EOF>
+	(Expression())* ("\n" | "\r")
 }
 
 
