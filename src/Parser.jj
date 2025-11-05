@@ -43,17 +43,22 @@ SPECIAL_TOKEN : {
 }
 
 TOKEN : {
-    <FUNC        : "func">
-  | <BEGIN       : "{">
-  | <END         : "}">
-  | <PARAM_BEGIN : "(">
-  | <PARAM_END   : ")">
-  | <PARAM_SEPARATOR : ",">
-  | <INT_TYPE    : "int">
-  | <BOOL_TYPE   : "bool">
-  | <FLOAT_TYPE  : "float">
-  | <STR_TYPE    : "str">
-  | <INSTRUCTION : "Instruction"> // temporaire
+      <FUNC            : "func">
+	| <BEGIN           : "{">
+	| <END             : "}">
+	| <PARAM_SEPARATOR : ",">
+	| <INT_TYPE        : "int">
+	| <BOOL_TYPE       : "bool">
+	| <FLOAT_TYPE      : "float">
+	| <STR_TYPE        : "str">
+	| <INSTRUCTION     : "Instruction"> // temporaire
+	| <PLUS            : "+">
+	| <MINUS           : "-">
+	| <MULTIPLY        : "*">
+	| <DIVIDE          : "/">
+	| <LPAREN          : "(">
+	| <RPAREN          : ")">
+	| <NUMBER: <INTEGER_LITERAL> | <FLOAT>>
 }
 
 TOKEN : {
@@ -88,7 +93,6 @@ TOKEN : {
     >
 }
 
-
 /** Root production. */
 void Input() :
 {}
@@ -99,7 +103,7 @@ void Input() :
 void Function() :
 {}
 {
-	<FUNC> Type() <IDENTIFIER> <PARAM_BEGIN> ParamaterList() <PARAM_END> <BEGIN> (Instruction())* <END>
+	<FUNC> Type() <IDENTIFIER> <LPAREN> ParamaterList() <RPAREN> <BEGIN> (Instruction())* <END>
 }
 
 void Type() :
@@ -130,18 +134,6 @@ void Paramater() :
 * Opération arithmétique
 */
 
-SKIP : { " " | "\t" }
-
-TOKEN : {
-  <PLUS: "+">
-| <MINUS: "-">
-| <MULTIPLY: "*">
-| <DIVIDE: "/">
-| <LPAREN: "(">
-| <RPAREN: ")">
-| <NUMBER: (["0"-"9"])+>
-}
-
 /** Arithmetic expression production. */
 void Expression() :
 {}
@@ -160,5 +152,5 @@ void Term() :
 void Factor() :
 {}
 {
-	<NUMBER> | "(" Expression() ")"
+	<NUMBER> | <LPAREN> Expression() <RPAREN>
 }
