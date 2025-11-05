@@ -135,7 +135,7 @@ void Paramater() :
 */
 
 /** Arithmetic expression production. */
-void Expression() :
+void ArExpression() :
 {}
 {
 	Term() (((<PLUS> | <MINUS>) Term()))*
@@ -152,5 +152,63 @@ void Term() :
 void Factor() :
 {}
 {
-	<NUMBER> | <LPAREN> Expression() <RPAREN>
+	<NUMBER> | <LPAREN> ArExpression() <RPAREN>
+}
+
+/**
+* Opération Logique
+*/
+
+TOKEN : {
+  <AND: "&">
+| <OR: "||">
+| <NOT: "!">
+| <SMALLER: "<">
+| <BIGGER: ">">
+| <EQUAL: "==">
+| <SMALLER_EQUAL: "=<">
+| <BIGGER_EQUAL: "=>">
+| <BOOL: "true" | "false">
+}
+
+/** Logical expression production */
+void LogExpression() :
+{}
+{
+	LogTerm() (<OR> LogTerm())*
+}
+
+/** Logical Term production */
+void LogTerm() :
+{}
+{
+	LogElement() (<AND> LogElement())*
+}
+
+/** Logical element production */
+void LogElement() :
+{}
+{
+	LogValue() | <NOT> LogValue()
+}
+
+/** Logical Value production */
+void LogValue() :
+{}
+{
+	<BOOL> | "(" LogExpression() ")" | Comp()
+}
+
+/** Comparaison production */
+void Comp() :
+{}
+{
+	ArExpression() OpComp() ArExpression()
+}
+
+/** Comparaison operator production */
+void OpComp() :
+{}
+{
+	<SMALLER> | <BIGGER> | <EQUAL> | <BIGGER_EQUAL> | <SMALLER_EQUAL>
 }
