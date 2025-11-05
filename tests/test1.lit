@@ -1,1 +1,3 @@
-func bool caca (bool caca, int caca) {caca}
+func bool mafonction (bool param1, int param2) {
+    Instruction
+}
