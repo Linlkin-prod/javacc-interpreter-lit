@@ -44,14 +44,21 @@ SPECIAL_TOKEN : {
 
 TOKEN : {
       <FUNC            : "func">
+	| <PROC			   : "proc">
+	| <RETURN         : "return">
+	| <IF             : "if">
+	| <ELSE           : "else">
+	| <WHILE          : "while">
 	| <BEGIN           : "{">
 	| <END             : "}">
 	| <PARAM_SEPARATOR : ",">
+	| <SEMICOLON      : ";">
 	| <INT_TYPE        : "int">
 	| <BOOL_TYPE       : "bool">
 	| <FLOAT_TYPE      : "float">
 	| <STR_TYPE        : "str">
 	| <INSTRUCTION     : "Instruction"> // temporaire
+	| <ASSIGNATION     : "=">
 	| <PLUS            : "+">
 	| <MINUS           : "-">
 	| <MULTIPLY        : "*">
@@ -103,7 +110,13 @@ void Input() :
 void Function() :
 {}
 {
-	<FUNC> Type() <IDENTIFIER> <LPAREN> ParamaterList() <RPAREN> <BEGIN> (Instruction())* <END>
+	<FUNC> Type() <IDENTIFIER> <LPAREN> ParamaterList() <RPAREN> <BEGIN> BlocInitialisation() BlocInstructions() <END>
+}
+
+void Procedure() :
+{}
+{
+	<PROC> <IDENTIFIER> <LPAREN> ParamaterList() <RPAREN> <BEGIN> BlocInitialisation() BlocInstructions() <END>
 }
 
 void Type() :
@@ -115,7 +128,7 @@ void Type() :
 void Instruction() :
 {}
 {
-	<INSTRUCTION>
+	Assignation() | ReturnStatement() | CallFunction() | IfStatement() | Initialisation() | WhileStatement()
 }
 
 void ParamaterList() :
@@ -130,6 +143,84 @@ void Paramater() :
 	Type() <IDENTIFIER>
 }
 
+void BlocInstructions() :
+{}
+{
+	(Instruction())* 
+}
+
+void BlocInitialisation() :
+{}
+{
+	(Initialisation())* 
+}
+
+void Initialisation() :
+{}
+{
+	<Type> <IDENTIFIER> <SEMICOLON> | <Type> Assignation()
+}
+
+void Assignation() :
+{}
+{
+	<IDENTIFIER> <ASSIGNATION> Expression() <SEMICOLON>
+}
+
+void ReturnStatement() :
+{}
+{
+	<RETURN> Expression() <SEMICOLON>
+}
+
+void InputParametersList() :
+{}
+{
+	(Expression() ( <PARAM_SEPARATOR> Expression() )* )? 
+}
+
+void CallFunction() :
+{}
+{
+	<IDENTIFIER> <LPAREN> InputParametersList() <RPAREN> <SEMICOLON>
+}
+
+void IfStatement() :
+{}
+{
+	<IF> <LPAREN> LogExpression() <RPAREN> <BEGIN> BlocInstructions() <END> ( <ELSE> <BEGIN> BlocInstructions() <END> )?
+}
+
+void WhileStatement() :
+{}
+{
+	<WHILE> <LPAREN> LogExpression() <RPAREN> <BEGIN> BlocInstructions() <END>
+}
+
+void ProcFunc () :
+{}
+{
+	Function() | Procedure()	
+}
+
+void FunctionProcedureBlock() :
+{}
+{
+	ProcFunc()*
+}
+
+void mainFunction() :
+{}
+{
+	<MAIN> <LPAREN> <RPAREN> <BEGIN> BlocInitialisation() BlocInstructions() <END>
+}
+
+void Program() :
+{}
+{
+	FunctionProcedureBlock() mainFunction()
+}
+
 /**
 * Opération arithmétique
 */
@@ -138,21 +229,21 @@ void Paramater() :
 void ArExpression() :
 {}
 {
-	Term() (((<PLUS> | <MINUS>) Term()))*
+	Term() ((<PLUS> | <MINUS>) Term())*
 }
 
 /** Term production (multiplication/division). */
 void Term() :
 {}
 {
-	Factor() (((<MULTIPLY> | <DIVIDE>) Factor()))*
+	Factor() ((<MULTIPLY> | <DIVIDE>) Factor())*
 }
 
 /** Factor production (numbers and parenthesized expressions). */
 void Factor() :
 {}
 {
-	<NUMBER> | <LPAREN> ArExpression() <RPAREN>
+	<NUMBER> | <LPAREN> ArExpression() <RPAREN> | <IDENTIFIER> | CallFunction()
 }
 
 /**
@@ -196,7 +287,7 @@ void LogElement() :
 void LogValue() :
 {}
 {
-	<BOOL> | "(" LogExpression() ")" | Comp()
+	<BOOL> | "(" LogExpression() ")" | Comp() | <IDENTIFIER> | CallFunction()
 }
 
 /** Comparaison production */
@@ -204,6 +295,12 @@ void Comp() :
 {}
 {
 	ArExpression() OpComp() ArExpression()
+}
+
+void Expression() :
+{}
+{
+	ArExpression() | LogExpression()
 }
 
 /** Comparaison operator production */
