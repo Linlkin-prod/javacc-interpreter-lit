@@ -23,7 +23,7 @@ public class Parser {
 			parser.Input();
 			System.out.println("Analyse syntaxique OK");
 		} catch (ParseException e) {
-			System.out.println("L'analyse syntaxique révèle des erreurs");
+			System.out.println(e);
 		}
 	}
 }
@@ -44,6 +44,7 @@ SPECIAL_TOKEN : {
 
 TOKEN : {
       <FUNC            : "func">
+      <PROC            : "proc">
 	| <BEGIN           : "{">
 	| <END             : "}">
 	| <PARAM_SEPARATOR : ",">
@@ -59,19 +60,20 @@ TOKEN : {
 	| <LPAREN          : "(">
 	| <RPAREN          : ")">
 	| <NUMBER: <INTEGER_LITERAL> | <FLOAT>>
+	| <AND: "&">
+	| <OR: "||">
+	| <NOT: "!">
+	| <SMALLER: "<">
+	| <BIGGER: ">">
+	| <EQUAL: "==">
+	| <SMALLER_EQUAL: "=<">
+	| <BIGGER_EQUAL: "=>">
+	| <BOOL: "true" | "false">
 }
 
 TOKEN : {
-    <INTEGER_LITERAL : ["1"-"9"] (["0"-"9"])* >
-
-  | <FLOAT :
-        (["0"-"9"])+ "." (["0"-"9"])* (<EXP>)? (["f","F","d","D"])?
-      | "." (["0"-"9"])+ (<EXP>)? (["f","F","d","D"])?
-      | (["0"-"9"])+ <EXP> (["f","F","d","D"])?
-      | (["0"-"9"])+ (<EXP>)? ["f","F","d","D"]
-    >
-
-  | <#EXP : ["e","E"] (["+","-"])? (["0"-"9"])+ >
+      <INTEGER_LITERAL : ["1"-"9"] (["0"-"9"])* >
+	| <FLOAT : (["0"-"9"])+ "." (["0"-"9"])>
 }
 
 TOKEN : {
@@ -79,16 +81,13 @@ TOKEN : {
 
   | <#LETTER :
         [
-          "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-          "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-          "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-          "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
+          "a"-"z","A"-"Z"
         ]
     >
 
   | <#DIGIT :
         [
-          "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+          "0"-"9"
         ]
     >
 }
@@ -97,7 +96,7 @@ TOKEN : {
 void Input() :
 {}
 {
-	Function() <EOF>
+	(LogExpression())* <EOF>
 }
 
 void Function() :
@@ -124,6 +123,10 @@ void ParamaterList() :
     Paramater() ( <PARAM_SEPARATOR> Paramater() )*
 }
 
+void InstructionsBloc() {
+	Instruction() ( Instruction() )*
+}
+
 void Paramater() :
 {}
 {
@@ -138,14 +141,14 @@ void Paramater() :
 void ArExpression() :
 {}
 {
-	Term() (((<PLUS> | <MINUS>) Term()))*
+	Term() ((<PLUS> | <MINUS>) Term())*
 }
 
 /** Term production (multiplication/division). */
 void Term() :
 {}
 {
-	Factor() (((<MULTIPLY> | <DIVIDE>) Factor()))*
+	Factor() ((<MULTIPLY> | <DIVIDE>) Factor())*
 }
 
 /** Factor production (numbers and parenthesized expressions). */
@@ -158,18 +161,6 @@ void Factor() :
 /**
 * Opération Logique
 */
-
-TOKEN : {
-  <AND: "&">
-| <OR: "||">
-| <NOT: "!">
-| <SMALLER: "<">
-| <BIGGER: ">">
-| <EQUAL: "==">
-| <SMALLER_EQUAL: "=<">
-| <BIGGER_EQUAL: "=>">
-| <BOOL: "true" | "false">
-}
 
 /** Logical expression production */
 void LogExpression() :
@@ -196,7 +187,7 @@ void LogElement() :
 void LogValue() :
 {}
 {
-	<BOOL> | "(" LogExpression() ")" | Comp()
+	<BOOL> | <LPAREN> LogExpression() <RPAREN> | Comp()
 }
 
 /** Comparaison production */
