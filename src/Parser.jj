@@ -20,10 +20,16 @@ public class Parser {
 			return;
 		}
 		try {
-			parser.Input();
+			Program program = parser.Input();
 			System.out.println("Analyse syntaxique OK");
+			System.out.println("Exécution du programme...");
+			program.execute();
+			System.out.println("Programme exécuté avec succès");
 		} catch (ParseException e) {
 			System.out.println("L'analyse syntaxique révèle des erreurs");
+		} catch (Exception e) {
+			System.out.println("Erreur lors de l'exécution : " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }
@@ -75,6 +81,7 @@ TOKEN : {
 	| <SMALLER: "<">
 	| <BIGGER: ">">
 	| <BOOL: "true" | "false">
+	| <STRING_LITERAL: "\"" (~["\"", "\n", "\r"])* "\"">
 	| <INTEGER_LITERAL : "0" | ["1"-"9"] (["0"-"9"])* >
 	| <FLOAT :
         (["0"-"9"])+ "." (["0"-"9"])* (<EXP>)? (["f","F","d","D"])?
@@ -100,139 +107,162 @@ TOKEN : {
 }
 
 /** Root production. */
-void Input() :
-{}
+Program Input() :
+{ Program program; }
 {
-	Program() <EOF>
+	program = Program() <EOF>
+	{ return program; }
 }
 
-void Function() :
-{}
+FunctionDef Function() :
+{ String returnType; String name; java.util.List<Parameter> params; java.util.List<Statement> statements; }
 {
-	<FUNC> Type() <IDENTIFIER> <LPAREN> ParamaterList() <RPAREN> <BEGIN> BlocInitialisation() BlocInstructions() <END>
+	<FUNC> returnType = Type() name = <IDENTIFIER>.image <LPAREN> params = ParamaterList() <RPAREN> <BEGIN> statements = BlocStatement() <END>
+	{ return new FunctionDef(name, returnType, params, statements); }
 }
 
 void Procedure() :
-{}
+{ String name; java.util.List<Parameter> params; java.util.List<Statement> statements; }
 {
-	<PROC> <IDENTIFIER> <LPAREN> ParamaterList() <RPAREN> <BEGIN> BlocInitialisation() BlocInstructions() <END>
+	<PROC> name = <IDENTIFIER>.image <LPAREN> params = ParamaterList() <RPAREN> <BEGIN> statements = BlocStatement() <END>
 }
 
-void Type() :
-{}
+String Type() :
+{ Token t; }
 {
-	<INT_TYPE> | <BOOL_TYPE> | <FLOAT_TYPE> | <STR_TYPE>
+	( t = <INT_TYPE> | t = <BOOL_TYPE> | t = <FLOAT_TYPE> | t = <STR_TYPE> )
+	{ return t.image; }
 }
 
-void Instruction() :
-{}
+Statement Instruction() :
+{ String id; Expression expr; Statement stmt; java.util.List args; }
 {
 	/*Toucher pas à ça pitié*/
-	LOOKAHEAD(<IDENTIFIER> <ASSIGNATION>) <IDENTIFIER> <ASSIGNATION> Expression() <SEMICOLON>
-	| <IDENTIFIER> <LPAREN> InputParametersList() <RPAREN> <SEMICOLON>
-	| ReturnStatement() | IfStatement() | WhileStatement()
+	LOOKAHEAD(<IDENTIFIER> <ASSIGNATION>) id = <IDENTIFIER>.image <ASSIGNATION> expr = Expression() <SEMICOLON>
+	{ return new Assignment(id, expr); }
+	| id = <IDENTIFIER>.image <LPAREN> args = InputParametersList() <RPAREN> <SEMICOLON>
+	{ return new ExpressionStatement(new FunctionCall(id, args)); }
+	| stmt = ReturnStatement() 
+	{ return stmt; }
+	| stmt = IfStatement() 
+	{ return stmt; }
+	| stmt = WhileStatement()
+	{ return stmt; }
 }
 
-void ParamaterList() :
-{}
+java.util.List<Parameter> ParamaterList() :
+{ java.util.List<Parameter> params = new java.util.ArrayList<Parameter>(); Parameter p; }
 {
-    (Paramater() ( <PARAM_SEPARATOR> Paramater() )*)?
+    ( p = Paramater() { params.add(p); } ( <PARAM_SEPARATOR> p = Paramater() { params.add(p); } )* )?
+    { return params; }
 }
 
-void Paramater() :
-{}
+Parameter Paramater() :
+{ String type; String name; }
 {
-	Type() <IDENTIFIER>
+	type = Type() name = <IDENTIFIER>.image
+	{ return new Parameter(type, name); }
 }
 
-void BlocInstructions() :
-{}
+java.util.List<Statement> BlocInstructions() :
+{ java.util.List<Statement> stmts = new java.util.ArrayList<Statement>(); Statement s; }
 {
-	(Instruction())* 
+	( s = Instruction() { stmts.add(s); } )* 
+	{ return stmts; }
 }
 
-void BlocInitialisation() :
-{}
+java.util.List<Statement> BlocInitialisation() :
+{ java.util.List<Statement> stmts = new java.util.ArrayList<Statement>(); Statement s; }
 {
-	(Initialisation())* 
+	( s = Initialisation() { stmts.add(s); } )* 
+	{ return stmts; }
 }
 
-void Initialisation() :
-{}
+Statement Initialisation() :
+{ String type; String name; Expression expr = null; }
 {
-	Type() <IDENTIFIER> (<ASSIGNATION> Expression())? <SEMICOLON>
+	type = Type() name = <IDENTIFIER>.image ( <ASSIGNATION> expr = Expression() )? <SEMICOLON>
+	{ return new VariableDeclaration(type, name, expr); }
 }
 
-void ReturnStatement() :
-{}
+Statement ReturnStatement() :
+{ Expression expr; }
 {
-	<RETURN> Expression() <SEMICOLON>
+	<RETURN> expr = Expression() <SEMICOLON>
+	{ return new ReturnStatement(expr); }
 }
 
-void InputParametersList() :
-{}
+java.util.List<Expression> InputParametersList() :
+{ java.util.List<Expression> exprs = new java.util.ArrayList<Expression>(); Expression e; }
 {
-	(Expression() ( <PARAM_SEPARATOR> Expression() )* )? 
+	( e = Expression() { exprs.add(e); } ( <PARAM_SEPARATOR> e = Expression() { exprs.add(e); } )* )? 
+	{ return exprs; }
 }
 
-void FunctionCall() :
-{}
+Expression FunctionCall() :
+{ String name; java.util.List<Expression> args; }
 {
-	<IDENTIFIER> <LPAREN> InputParametersList() <RPAREN>
+	name = <IDENTIFIER>.image <LPAREN> args = InputParametersList() <RPAREN>
+	{ return new FunctionCall(name, args); }
 }
 
-void CallFunction() :
-{}
+
+Statement IfStatement() :
+{ Expression cond; java.util.List<Statement> thenBlock; java.util.List<Statement> elseBlock = null; }
 {
-	<IDENTIFIER> <LPAREN> InputParametersList() <RPAREN> <SEMICOLON>
+	<IF> <LPAREN> cond = LogExpression() <RPAREN> <BEGIN> thenBlock = BlocStatement() <END> ( <ELSE> <BEGIN> elseBlock = BlocStatement() <END> )?
+	{ return new IfStatement(cond, thenBlock, elseBlock); }
 }
 
-void IfStatement() :
-{}
+Statement WhileStatement() :
+{ Expression cond; java.util.List<Statement> body; }
 {
-	<IF> <LPAREN> LogExpression() <RPAREN> <BEGIN> BlocInstructions() <END> ( <ELSE> <BEGIN> BlocInstructions() <END> )?
+	<WHILE> <LPAREN> cond = LogExpression() <RPAREN> <BEGIN> body = BlocStatement() <END>
+	{ return new WhileStatement(cond, body); }
 }
 
-void WhileStatement() :
-{}
+FunctionDef ProcFunc () :
+{ FunctionDef f; }
 {
-	<WHILE> <LPAREN> LogExpression() <RPAREN> <BEGIN> BlocInstructions() <END>
+	f = Function() { return f; }
+	| Procedure() { return null; }
 }
 
-void ProcFunc () :
-{}
+java.util.List<FunctionDef> FunctionProcedureBlock() :
+{ java.util.List<FunctionDef> funcs = new java.util.ArrayList<FunctionDef>(); FunctionDef f; }
 {
-	Function() | Procedure()	
+	( f = ProcFunc() { if (f != null) funcs.add(f); } )*
+	{ return funcs; }
 }
 
-void FunctionProcedureBlock() :
-{}
+MainBlock mainFunction() :
+{ java.util.List<Statement> statements; }
 {
-	(ProcFunc())*
+	<MAIN> <LPAREN> <RPAREN> <BEGIN> statements = BlocStatement() <END>
+	{ return new MainBlock(statements); }
 }
 
-void mainFunction() :
-{}
+java.util.List<Statement> BlocStatement() :
+{ java.util.List<Statement> stmts = new java.util.ArrayList<Statement>(); Statement s; }
 {
-	<MAIN> <LPAREN> <RPAREN> <BEGIN> BlocStatement() <END>
+	( s = Statement() { stmts.add(s); } )*
+	{ return stmts; }
 }
 
-void BlocStatement() :
-{}
+Statement Statement() :
+{ Statement stmt; }
 {
-	(Statement())*
+	stmt = Initialisation() 
+	{ return stmt; }
+	| stmt = Instruction()
+	{ return stmt; }
 }
 
-void Statement() :
-{}
+Program Program() :
+{ java.util.List<FunctionDef> functions; MainBlock main; }
 {
-	Initialisation() | Instruction()
-}
-
-void Program() :
-{}
-{
-	FunctionProcedureBlock() mainFunction()
+	functions = FunctionProcedureBlock() main = mainFunction()
+	{ return new Program(functions, main); }
 }
 
 /**
@@ -240,24 +270,32 @@ void Program() :
 */
 
 /** Arithmetic expression production. */
-void ArExpression() :
-{}
+Expression ArExpression() :
+{ Expression term; Expression result; String op; }
 {
-	Term() ((<PLUS> | <MINUS>) Term())*
+	result = Term() ( (op = <PLUS>.image | op = <MINUS>.image) term = Term() { result = new BinaryOp(result, op, term); } )*
+	{ return result; }
 }
 
 /** Term production (multiplication/division). */
-void Term() :
-{}
+Expression Term() :
+{ Expression factor; Expression result; String op; }
 {
-	Factor() ((<MULTIPLY> | <DIVIDE>) Factor())*
+	result = Factor() ( (op = <MULTIPLY>.image | op = <DIVIDE>.image) factor = Factor() { result = new BinaryOp(result, op, factor); } )*
+	{ return result; }
 }
 
 /** Factor production (numbers and parenthesized expressions). */
-void Factor() :
-{}
+Expression Factor() :
+{ Token t; Expression expr; }
 {
-	(<INTEGER_LITERAL> | <FLOAT>) | <LPAREN> ArExpression() <RPAREN> | LOOKAHEAD(<IDENTIFIER> <LPAREN>) FunctionCall() | <IDENTIFIER>
+	( t = <INTEGER_LITERAL> { return new IntegerLiteral(Integer.parseInt(t.image)); }
+	| t = <FLOAT> { return new FloatLiteral(Double.parseDouble(t.image)); }
+	| t = <STRING_LITERAL> { String s = t.image; return new StringLiteral(s.substring(1, s.length()-1)); }
+	| <LPAREN> expr = ArExpression() <RPAREN> { return expr; }
+	| LOOKAHEAD(<IDENTIFIER> <LPAREN>) expr = FunctionCall() { return expr; }
+	| t = <IDENTIFIER> { return new Variable(t.image); }
+	)
 }
 
 /**
@@ -265,49 +303,59 @@ void Factor() :
 */
 
 /** Logical expression production */
-void LogExpression() :
-{}
+Expression LogExpression() :
+{ Expression term; Expression result; }
 {
-	LogTerm() (<OR> LogTerm())*
+	result = LogTerm() ( <OR> term = LogTerm() { result = new BinaryOp(result, "||", term); } )*
+	{ return result; }
 }
 
 /** Logical Term production */
-void LogTerm() :
-{}
+Expression LogTerm() :
+{ Expression element; Expression result; }
 {
-	LogElement() (<AND> LogElement())*
+	result = LogElement() ( <AND> element = LogElement() { result = new BinaryOp(result, "&", element); } )*
+	{ return result; }
 }
 
 /** Logical element production */
-void LogElement() :
-{}
+Expression LogElement() :
+{ Expression value; }
 {
-	LogValue() | <NOT> LogValue()
+	value = LogValue() { return value; }
+	| <NOT> value = LogValue() { return new UnaryOp("!", value); }
 }
 
 /** Logical Value production */
-void LogValue() :
-{}
+Expression LogValue() :
+{ Expression comp; Expression arith; Token t; }
 {
-	LOOKAHEAD(ArExpression() OpComp()) Comp() | <BOOL> | "(" LogExpression() ")" | LOOKAHEAD(<IDENTIFIER> <LPAREN>) FunctionCall() | ArExpression()
+	LOOKAHEAD(ArExpression() OpComp()) comp = Comp() { return comp; }
+	| t = <BOOL> { return new BooleanLiteral(Boolean.parseBoolean(t.image)); }
+	| <LPAREN> comp = LogExpression() <RPAREN> { return comp; }
+	| LOOKAHEAD(<IDENTIFIER> <LPAREN>) arith = FunctionCall() { return arith; }
+	| arith = ArExpression() { return arith; }
 }
 
 /** Comparaison production */
-void Comp() :
-{}
+Expression Comp() :
+{ Expression left; String op; Expression right; }
 {
-	ArExpression() OpComp() ArExpression()
+	left = ArExpression() op = OpComp() right = ArExpression()
+	{ return new BinaryOp(left, op, right); }
 }
 
-void Expression() :
-{}
+Expression Expression() :
+{ Expression expr; }
 {
-	LogExpression()
+	expr = LogExpression()
+	{ return expr; }
 }
 
 /** Comparaison operator production */
-void OpComp() :
-{}
+String OpComp() :
+{ Token t; }
 {
-	<SMALLER> | <BIGGER> | <EQUAL> | <BIGGER_EQUAL> | <SMALLER_EQUAL>
+	( t = <SMALLER> | t = <BIGGER> | t = <EQUAL> | t = <BIGGER_EQUAL> | t = <SMALLER_EQUAL> )
+	{ return t.image; }
 }

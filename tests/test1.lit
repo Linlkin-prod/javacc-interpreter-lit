@@ -17,11 +17,21 @@ main() {
     int y = 20;
     bool flag = true;
     float value = 3.14;
+
+    print("Hello, World!");
+    print("the value of x is:");
+    print(x);
     
     x = 15;
+    print("before addition, y is:");
+    print(y);
     y = add(x, 5);
+    print("After addition, y is:");
+    print(y);
 
     bool test = x > y;
+    print("Is x greater than y?");
+    print(test);
     
     if (flag) {
         x = x + 1;
@@ -32,4 +42,6 @@ main() {
     while (x < 100) {
         x = x + 10;
     }
+    print("Final value of x:");
+    print(x);
 }
