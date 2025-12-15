@@ -45,6 +45,7 @@ SPECIAL_TOKEN : {
 TOKEN : {
       <FUNC            : "func">
 	| <PROC			   : "proc">
+	| <MAIN            : "main">
 	| <RETURN         : "return">
 	| <IF             : "if">
 	| <ELSE           : "else">
@@ -65,26 +66,25 @@ TOKEN : {
 	| <DIVIDE          : "/">
 	| <LPAREN          : "(">
 	| <RPAREN          : ")">
-	| <NUMBER: <INTEGER_LITERAL> | <FLOAT>>
-}
-
-TOKEN : {
-    <INTEGER_LITERAL : ["1"-"9"] (["0"-"9"])* >
-
-  | <FLOAT :
+	| <AND: "&">
+	| <OR: "||">
+	| <NOT: "!">
+	| <SMALLER_EQUAL: "=<">
+	| <BIGGER_EQUAL: "=>">
+	| <EQUAL: "==">
+	| <SMALLER: "<">
+	| <BIGGER: ">">
+	| <BOOL: "true" | "false">
+	| <INTEGER_LITERAL : "0" | ["1"-"9"] (["0"-"9"])* >
+	| <FLOAT :
         (["0"-"9"])+ "." (["0"-"9"])* (<EXP>)? (["f","F","d","D"])?
       | "." (["0"-"9"])+ (<EXP>)? (["f","F","d","D"])?
       | (["0"-"9"])+ <EXP> (["f","F","d","D"])?
       | (["0"-"9"])+ (<EXP>)? ["f","F","d","D"]
     >
-
-  | <#EXP : ["e","E"] (["+","-"])? (["0"-"9"])+ >
-}
-
-TOKEN : {
-    <IDENTIFIER : <LETTER> (<LETTER> | <DIGIT>)* >
-
-  | <#LETTER :
+	| <#EXP : ["e","E"] (["+","-"])? (["0"-"9"])+ >
+	| <IDENTIFIER : <LETTER> (<LETTER> | <DIGIT>)* >
+	| <#LETTER :
         [
           "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
           "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
@@ -92,8 +92,7 @@ TOKEN : {
           "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
         ]
     >
-
-  | <#DIGIT :
+	| <#DIGIT :
         [
           "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
         ]
@@ -104,7 +103,7 @@ TOKEN : {
 void Input() :
 {}
 {
-	Function() <EOF>
+	Program() <EOF>
 }
 
 void Function() :
@@ -128,13 +127,16 @@ void Type() :
 void Instruction() :
 {}
 {
-	Assignation() | ReturnStatement() | CallFunction() | IfStatement() | Initialisation() | WhileStatement()
+	/*Toucher pas à ça pitié*/
+	LOOKAHEAD(<IDENTIFIER> <ASSIGNATION>) <IDENTIFIER> <ASSIGNATION> Expression() <SEMICOLON>
+	| <IDENTIFIER> <LPAREN> InputParametersList() <RPAREN> <SEMICOLON>
+	| ReturnStatement() | IfStatement() | WhileStatement()
 }
 
 void ParamaterList() :
 {}
 {
-    Paramater() ( <PARAM_SEPARATOR> Paramater() )*
+    (Paramater() ( <PARAM_SEPARATOR> Paramater() )*)?
 }
 
 void Paramater() :
@@ -158,13 +160,7 @@ void BlocInitialisation() :
 void Initialisation() :
 {}
 {
-	<Type> <IDENTIFIER> <SEMICOLON> | <Type> Assignation()
-}
-
-void Assignation() :
-{}
-{
-	<IDENTIFIER> <ASSIGNATION> Expression() <SEMICOLON>
+	Type() <IDENTIFIER> (<ASSIGNATION> Expression())? <SEMICOLON>
 }
 
 void ReturnStatement() :
@@ -177,6 +173,12 @@ void InputParametersList() :
 {}
 {
 	(Expression() ( <PARAM_SEPARATOR> Expression() )* )? 
+}
+
+void FunctionCall() :
+{}
+{
+	<IDENTIFIER> <LPAREN> InputParametersList() <RPAREN>
 }
 
 void CallFunction() :
@@ -206,13 +208,25 @@ void ProcFunc () :
 void FunctionProcedureBlock() :
 {}
 {
-	ProcFunc()*
+	(ProcFunc())*
 }
 
 void mainFunction() :
 {}
 {
-	<MAIN> <LPAREN> <RPAREN> <BEGIN> BlocInitialisation() BlocInstructions() <END>
+	<MAIN> <LPAREN> <RPAREN> <BEGIN> BlocStatement() <END>
+}
+
+void BlocStatement() :
+{}
+{
+	(Statement())*
+}
+
+void Statement() :
+{}
+{
+	Initialisation() | Instruction()
 }
 
 void Program() :
@@ -243,24 +257,12 @@ void Term() :
 void Factor() :
 {}
 {
-	<NUMBER> | <LPAREN> ArExpression() <RPAREN> | <IDENTIFIER> | CallFunction()
+	(<INTEGER_LITERAL> | <FLOAT>) | <LPAREN> ArExpression() <RPAREN> | LOOKAHEAD(<IDENTIFIER> <LPAREN>) FunctionCall() | <IDENTIFIER>
 }
 
 /**
 * Opération Logique
 */
-
-TOKEN : {
-  <AND: "&">
-| <OR: "||">
-| <NOT: "!">
-| <SMALLER: "<">
-| <BIGGER: ">">
-| <EQUAL: "==">
-| <SMALLER_EQUAL: "=<">
-| <BIGGER_EQUAL: "=>">
-| <BOOL: "true" | "false">
-}
 
 /** Logical expression production */
 void LogExpression() :
@@ -287,7 +289,7 @@ void LogElement() :
 void LogValue() :
 {}
 {
-	<BOOL> | "(" LogExpression() ")" | Comp() | <IDENTIFIER> | CallFunction()
+	LOOKAHEAD(ArExpression() OpComp()) Comp() | <BOOL> | "(" LogExpression() ")" | LOOKAHEAD(<IDENTIFIER> <LPAREN>) FunctionCall() | ArExpression()
 }
 
 /** Comparaison production */
@@ -300,7 +302,7 @@ void Comp() :
 void Expression() :
 {}
 {
-	ArExpression() | LogExpression()
+	LogExpression()
 }
 
 /** Comparaison operator production */

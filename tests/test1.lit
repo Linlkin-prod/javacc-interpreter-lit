@@ -1,3 +1,35 @@
-func bool mafonction (bool param1, int param2) {
-    Instruction
+func int add(int a, int b) {
+    int result = a + b;
+    return result;
+}
+
+func int subtract(int a, int b) {
+    int result = a - b;
+    return result;
+}
+
+proc displayNum(int n) {
+    int x = n;
+}
+
+main() {
+    int x = 10;
+    int y = 20;
+    bool flag = true;
+    float value = 3.14;
+    
+    x = 15;
+    y = add(x, 5);
+
+    bool test = x > y;
+    
+    if (flag) {
+        x = x + 1;
+    } else {
+        x = x - 1;
+    }
+    
+    while (x < 100) {
+        x = x + 10;
+    }
 }
